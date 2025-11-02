@@ -12,6 +12,6 @@ export const config = getDefaultConfig({
   projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID!,
   chains: [base],
   transports: {
-    [base.id]: http('https://mainnet.base.org'), // официальный RPC Base
-  },
+  [base.id]: http(), // используем дефолтный RPC из описания chain c корректными CORS
+ },
 })
