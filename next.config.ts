@@ -10,16 +10,17 @@ const csp = [
   "base-uri 'self'",
 
   // скрипты/стили (Next/Tailwind)
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  + "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.walletconnect.com",
   "style-src 'self' 'unsafe-inline'",
 
   // изображения (локальные, WC, лайтхаус)
   [
-    "img-src 'self' data: blob:",
-    'https://assets.walletconnect.com',
-    'https://images.walletconnect.com',
-    'https://explorer-api.walletconnect.com',
-    'https://gateway.lighthouse.storage',
++    "img-src 'self' data: blob:",
++    'https://assets.walletconnect.com',
++    'https://images.walletconnect.com',
++    'https://explorer-api.walletconnect.com',
++    'https://cdn.walletconnect.com',
++    'https://gateway.lighthouse.storage',
   ].join(' '),
 
   // аудио/видео из /public
@@ -42,6 +43,7 @@ const csp = [
     'https://explorer-api.walletconnect.com',
     'https://registry.walletconnect.com',        // ← добавил (по их реестру)
     'https://images.walletconnect.com',
+    'https://cdn.walletconnect.com',
     // wildcard на *.walletconnect.com (на случай внутренних поддоменов SDK)
     'https://*.walletconnect.com',
     'wss://*.walletconnect.com',
