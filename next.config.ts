@@ -10,17 +10,17 @@ const csp = [
   "base-uri 'self'",
 
   // скрипты/стили (Next/Tailwind)
-  + "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.walletconnect.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.walletconnect.com",
   "style-src 'self' 'unsafe-inline'",
 
   // изображения (локальные, WC, лайтхаус)
   [
-+    "img-src 'self' data: blob:",
-+    'https://assets.walletconnect.com',
-+    'https://images.walletconnect.com',
-+    'https://explorer-api.walletconnect.com',
-+    'https://cdn.walletconnect.com',
-+    'https://gateway.lighthouse.storage',
+    "img-src 'self' data: blob:",
+    'https://assets.walletconnect.com',
+    'https://images.walletconnect.com',
+    'https://explorer-api.walletconnect.com',
+    'https://cdn.walletconnect.com',
+    'https://gateway.lighthouse.storage',
   ].join(' '),
 
   // аудио/видео из /public
@@ -41,10 +41,10 @@ const csp = [
     'wss://relay.walletconnect.com',
     'https://rpc.walletconnect.com',
     'https://explorer-api.walletconnect.com',
-    'https://registry.walletconnect.com',        // ← добавил (по их реестру)
+    'https://registry.walletconnect.com',
     'https://images.walletconnect.com',
     'https://cdn.walletconnect.com',
-    // wildcard на *.walletconnect.com (на случай внутренних поддоменов SDK)
+    // wildcard на *.walletconnect.com
     'https://*.walletconnect.com',
     'wss://*.walletconnect.com',
     // deeplink-домены некоторых кошельков
@@ -54,7 +54,7 @@ const csp = [
   // шрифты
   "font-src 'self' data:",
 
-  // фреймы (если когда-то понадобится WC-виджет)
+  // фреймы (если понадобится WC-виджет)
   ["frame-src 'self'", 'https://*.walletconnect.com'].join(' '),
 
   // воркеры (нужны некоторым сборкам Next)
@@ -77,7 +77,7 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'no-referrer' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
-          { key: 'Content-Security-Policy', value: csp }, // ← важный заголовок
+          { key: 'Content-Security-Policy', value: csp },
         ],
       },
     ]
