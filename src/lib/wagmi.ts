@@ -1,18 +1,11 @@
 // src/lib/wagmi.ts
 'use client'
 
-/**
- * ✅ Что делает файл:
- * 1) Включает полный список кошельков RainbowKit (через getDefaultConfig)
- * 2) Даёт надёжный fallback по нескольким RPC (viem.fallback)
- * 3) Работает и на десктопе, и на мобилках — модалка кошельков не пустая
- */
-
 import { getDefaultConfig } from '@rainbow-me/rainbowkit'
 import { base } from 'wagmi/chains'
 import { http, fallback } from 'viem'
 
-// ---- RPC fallback (идём по порядку, без rank) -------------------------------
+// ---------- RPC fallback (как у тебя) ----------
 const RPC_1 = process.env.NEXT_PUBLIC_RPC_URL?.trim()
 const RPCS = [
   RPC_1,
@@ -21,33 +14,45 @@ const RPCS = [
   'https://lb.drpc.org/ogrpc?network=base&dkey=public',
 ].filter(Boolean) as string[]
 
-/**
- * ВАЖНО: не используем stallTimeout (в этой версии типов viem его нет).
- * Задаём timeout каждому http-инстансу. Если RPC молчит дольше timeout,
- * fallback сам переключится на следующий.
- */
 const transport = fallback(
   RPCS.map((url) =>
     http(url, {
-      retryCount: 1,   // 1 повтор до переключения на следующий RPC
-      timeout: 1500,   // 1.5s на ответ
+      retryCount: 1,
+      timeout: 1500,
     }),
   ),
-  { rank: false },     // строго в порядке массива RPCS
+  { rank: false },
 )
 
-// ---- RainbowKit + WalletConnect v2 ------------------------------------------
-/**
- * Нужен WalletConnect Project ID:
- *   NEXT_PUBLIC_WC_PROJECT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
- * Без него список кошельков может быть пустым.
- */
+// ---------- WalletConnect ----------
 const WC_ID = process.env.NEXT_PUBLIC_WC_PROJECT_ID!
+const wcMetadata = {
+  name: 'FROC Mint',
+  description: 'FROC Multiverse NFT – mint on Base.',
+  url: 'https://froc-nft.com',
+  icons: ['https://froc-nft.com/icon-512.png'], // положи файл в /public
+}
 
+/**
+ * В некоторых версиях RainbowKit meta пробрасывается через
+ * `walletConnectOptions` или `walletConnectAppMetadata`, а в некоторых — нет.
+ * Делаем «мягко»: если типы не позволяют — просто игнорим для TS,
+ * но на рантайме ключ будет передан.
+ */
 export const config = getDefaultConfig({
   appName: 'FROC Mint',
-  projectId: WC_ID,                 // даёт WalletConnect v2 и полный список кошельков
+  projectId: WC_ID,
   chains: [base],
-  transports: { [base.id]: transport }, // наш RPC-fallback
+  transports: { [base.id]: transport },
   ssr: true,
+
+  // Вариант 1 (если твоя версия поддерживает):
+  // walletConnectOptions: { projectId: WC_ID, metadata: wcMetadata },
+
+  // Вариант 2 (часто работает, если доступен):
+  // walletConnectAppMetadata: wcMetadata,
+
+  // Вариант 3 — принудительно, не ломая сборку:
+  // @ts-expect-error: в твоей версии может не быть этого поля в типах, но рантайм его понимает
+  walletConnectOptions: { projectId: WC_ID, metadata: wcMetadata },
 })

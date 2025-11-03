@@ -5,46 +5,56 @@ const isProd = process.env.NODE_ENV === 'production'
 
 // Content Security Policy
 const csp = [
-  // Базовые источники
+  // базовые
   "default-src 'self'",
   "base-uri 'self'",
-  // Скрипты/стили (Next + inline для hydration/Tailwind)
+
+  // скрипты/стили (Next/Tailwind hydration)
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-  "style-src  'self' 'unsafe-inline'",
-  // Картинки (локальные, data/blob, и иконки WC + наши IPFS-картинки)
+  "style-src 'self' 'unsafe-inline'",
+
+  // картинки (локальные, data/blob, WC, IPFS)
   [
     "img-src 'self' data: blob:",
-    "https://assets.walletconnect.com",
-    "https://gateway.lighthouse.storage",
+    'https://assets.walletconnect.com',
+    'https://images.walletconnect.com',
+    'https://explorer-api.walletconnect.com',
+    'https://gateway.lighthouse.storage',
   ].join(' '),
-  // Медиа (фон. музыка из /public)
+
+  // медиа (наша музыка из /public)
   "media-src 'self' data:",
-  // Сетевые запросы (RPC, WC, IPFS-мета и т.д.)
+
+  // сетевые запросы (RPC, WC, IPFS)
   [
     "connect-src 'self'",
-    // Base RPC + твои фолбэки
-    "https://mainnet.base.org",
-    "https://base.llamarpc.com",
-    "https://base.publicnode.com",
-    "https://lb.drpc.org",
-    // WalletConnect v2 (HTTP + WS)
-    "https://rpc.walletconnect.com",
-    "https://api.walletconnect.com",
-    "https://relay.walletconnect.com",
-    "https://*.walletconnect.com",
-    "wss://relay.walletconnect.com",
-    "wss://*.walletconnect.com",
-    // Метаданные/картинки токенов через Lighthouse
-    "https://gateway.lighthouse.storage",
+    // Base RPC
+    'https://mainnet.base.org',
+    'https://base.llamarpc.com',
+    'https://base.publicnode.com',
+    'https://lb.drpc.org',
+    // Lighthouse (metadata/images)
+    'https://gateway.lighthouse.storage',
+    // WalletConnect (HTTP + WS)
+    'https://rpc.walletconnect.com',
+    'https://api.walletconnect.com',
+    'https://relay.walletconnect.com',
+    'https://explorer-api.walletconnect.com',
+    'https://images.walletconnect.com',
+    'https://*.walletconnect.com',
+    'wss://relay.walletconnect.com',
+    'wss://*.walletconnect.com',
+    // иногда deeplink идёт через app.link у кошельков
+    'https://*.app.link',
   ].join(' '),
-  // Шрифты
+
+  // шрифты
   "font-src 'self' data:",
-  // Встраивание фреймов (на всякий случай WC-поддомены)
-  [
-    "frame-src 'self'",
-    "https://*.walletconnect.com",
-  ].join(' '),
-  // Запрет на встраивание нашего сайта куда-либо
+
+  // если когда-то будет встраивание виджетов WC
+  ["frame-src 'self'", 'https://*.walletconnect.com'].join(' '),
+
+  // запрет встраивания нашего сайта куда-либо
   "frame-ancestors 'none'",
 ].join('; ')
 
@@ -61,7 +71,7 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'no-referrer' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
-          // ВАЖНО: CSP последним, чтобы было видно целиком в devtools
+          // CSP последним, чтобы в DevTools было видно целиком
           { key: 'Content-Security-Policy', value: csp },
         ],
       },
