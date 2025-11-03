@@ -47,6 +47,16 @@ export default function Page() {
             <div className="flex items-center justify-center mb-4">
               <ConnectButton accountStatus="address" chainStatus="name" showBalance={false} />
             </div>
+            {typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) ? (
+          <p className="mt-2 text-xs text-white/60">
+          <b>Having trouble connecting on mobile?</b><br />
+             On some iOS devices, tapping a wallet may not open the app. Try a desktop browser. A fix is on the way.
+          </p>
+) : (
+  <p className="mt-2 text-xs text-white/60">
+    <b>Having trouble connecting on mobile?</b> Try <span className="underline">WalletConnect</span> or a desktop browser.
+  </p>
+)}
 
             <MintInfo />
             <MintForm />
