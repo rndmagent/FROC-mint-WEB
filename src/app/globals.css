@@ -24,3 +24,27 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* === floating blurred collage bg === */
+@keyframes bg-float-up {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-240px); } /* сколько пройдёт за цикл */
+}
+
+.bg-collage {
+  position: fixed;          /* фиксируем к вьюпорту */
+  inset: 0;
+  z-index: 0;               /* ниже контента */
+  pointer-events: none;     /* чтобы не мешала кликам */
+  display: grid;
+  place-items: center;      /* центрируем картинку */
+  opacity: .25;             /* лёгкая прозрачность, чтобы не шумело */
+  filter: blur(2px);        /* мягкий блюр самого коллажа */
+  will-change: transform;
+}
+
+.bg-collage img {
+  width: min(1400px, 110vw);   /* крупнее экрана, чтобы не были видны края */
+  height: auto;
+  animation: bg-float-up 200s linear infinite;
+}

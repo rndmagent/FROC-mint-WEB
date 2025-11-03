@@ -13,6 +13,7 @@ import { base } from 'wagmi/chains'
 import { formatEther } from 'viem'
 import { FROC_ADDRESS, FROC_ABI } from '@/lib/contract'
 
+
 export default function MintForm() {
   const [qty, setQty] = useState(1)
   const chainId = useChainId()

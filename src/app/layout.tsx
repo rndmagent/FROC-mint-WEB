@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: 'FROC Mint' }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru">
+    <html lang="en">
       <body>
         <Providers>{children}</Providers>
       </body>
