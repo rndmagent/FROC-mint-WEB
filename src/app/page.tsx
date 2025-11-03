@@ -1,5 +1,6 @@
 // src/app/page.tsx
 'use client'
+import DebugStatus from './components/DebugStatus'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import Hero from './components/Hero'
 import MintInfo from './components/MintInfo'
@@ -43,6 +44,7 @@ export default function Page() {
             <MintForm />
             <MintStatsInline />
             <Disclaimer />
+            <DebugStatus />
           </div>
 
           {/* нижние ссылки */}
