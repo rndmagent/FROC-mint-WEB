@@ -14,7 +14,10 @@ const csp = [
   [
     "connect-src 'self'",
     "https://mainnet.base.org",           // Base офиц. RPC
-    "https://base.llamarpc.com",          // Llama RPC (CORS ок)
+    "https://base.llamarpc.com", 
+    "https://base.llamarpc.com",
+    "https://base.publicnode.com" ,
+    "https://lb.drpc.org",         // Llama RPC (CORS ок)
     "https://rpc.walletconnect.com",      // WC RPC
     "https://api.walletconnect.com",      // WC API
     "https://relay.walletconnect.com",    // WC relay (HTTP)
