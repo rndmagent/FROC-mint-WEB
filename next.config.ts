@@ -3,17 +3,17 @@ import type { NextConfig } from 'next'
 
 const isProd = process.env.NODE_ENV === 'production'
 
-// Content Security Policy
+// --- Content Security Policy ---
 const csp = [
   // базовые
   "default-src 'self'",
   "base-uri 'self'",
 
-  // скрипты/стили (Next/Tailwind hydration)
+  // скрипты/стили (Next/Tailwind)
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
 
-  // картинки (локальные, data/blob, WC, IPFS)
+  // изображения (локальные, WC, лайтхаус)
   [
     "img-src 'self' data: blob:",
     'https://assets.walletconnect.com',
@@ -22,10 +22,10 @@ const csp = [
     'https://gateway.lighthouse.storage',
   ].join(' '),
 
-  // медиа (наша музыка из /public)
+  // аудио/видео из /public
   "media-src 'self' data:",
 
-  // сетевые запросы (RPC, WC, IPFS)
+  // СЕТЬ: RPC + WalletConnect (HTTP + WSS)
   [
     "connect-src 'self'",
     // Base RPC
@@ -35,26 +35,30 @@ const csp = [
     'https://lb.drpc.org',
     // Lighthouse (metadata/images)
     'https://gateway.lighthouse.storage',
-    // WalletConnect (HTTP + WS)
-    'https://rpc.walletconnect.com',
-    'https://api.walletconnect.com',
+    // WalletConnect официальные домены
     'https://relay.walletconnect.com',
-    'https://explorer-api.walletconnect.com',
-    'https://images.walletconnect.com',
-    'https://*.walletconnect.com',
     'wss://relay.walletconnect.com',
+    'https://rpc.walletconnect.com',
+    'https://explorer-api.walletconnect.com',
+    'https://registry.walletconnect.com',        // ← добавил (по их реестру)
+    'https://images.walletconnect.com',
+    // wildcard на *.walletconnect.com (на случай внутренних поддоменов SDK)
+    'https://*.walletconnect.com',
     'wss://*.walletconnect.com',
-    // иногда deeplink идёт через app.link у кошельков
+    // deeplink-домены некоторых кошельков
     'https://*.app.link',
   ].join(' '),
 
   // шрифты
   "font-src 'self' data:",
 
-  // если когда-то будет встраивание виджетов WC
+  // фреймы (если когда-то понадобится WC-виджет)
   ["frame-src 'self'", 'https://*.walletconnect.com'].join(' '),
 
-  // запрет встраивания нашего сайта куда-либо
+  // воркеры (нужны некоторым сборкам Next)
+  "worker-src 'self' blob:",
+
+  // запрет встраивания нашего сайта
   "frame-ancestors 'none'",
 ].join('; ')
 
@@ -71,8 +75,7 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'no-referrer' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
-          // CSP последним, чтобы в DevTools было видно целиком
-          { key: 'Content-Security-Policy', value: csp },
+          { key: 'Content-Security-Policy', value: csp }, // ← важный заголовок
         ],
       },
     ]

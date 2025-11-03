@@ -61,9 +61,9 @@ export default function MintForm() {
   const { switchChainAsync, isPending: switching } = useSwitchChain()
   const { writeContract, data: hash, isPending, error: writeError } = useWriteContract()
 
-  // Чтение параметров
-  const { data: price }  = useReadContract({ address: FROC_ADDRESS, abi: FROC_ABI, functionName: 'price' })
-  const { data: active } = useReadContract({ address: FROC_ADDRESS, abi: FROC_ABI, functionName: 'mintActive' })
+  // Чтение параметров (жёстко читаем с Base)
+  const { data: price }  = useReadContract({ chainId: base.id, address: FROC_ADDRESS, abi: FROC_ABI, functionName: 'price' })
+  const { data: active } = useReadContract({ chainId: base.id, address: FROC_ADDRESS, abi: FROC_ABI, functionName: 'mintActive' })
 
   // Ожидаем майнинг
   const { data: receipt, isLoading: waiting, isSuccess: mined, error: waitError } =
@@ -74,7 +74,11 @@ export default function MintForm() {
 
   async function ensureBase() {
     if (chainId !== base.id) {
-      await switchChainAsync({ chainId: base.id })
+      try {
+        await switchChainAsync({ chainId: base.id })
+      } catch {
+        return
+      }
     }
   }
 
@@ -98,17 +102,14 @@ export default function MintForm() {
   const disabled =
     !isConnected || active === false || typeof price !== 'bigint' || isPending || waiting || switching || notBase
 
-  // После майнинга: парсим receipt, вытаскиваем tokenId, читаем tokenURI → метадата
+  // После майнинга: парсим receipt → tokenIds → tokenURI → метадата
   useEffect(() => {
     if (!mined || !receipt || !publicClient) return
-
     (async () => {
       try {
-        // Keccak-256("Transfer(address,address,uint256)")
         const TRANSFER_TOPIC =
           '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' as const
 
-        // 1) Собираем tokenIds из логов именно нашего контракта
         const tokenIds: bigint[] = []
         for (const log of receipt.logs ?? []) {
           const sameAddress = (log as any).address?.toLowerCase() === FROC_ADDRESS.toLowerCase()
@@ -120,8 +121,6 @@ export default function MintForm() {
         }
         if (!tokenIds.length) return
 
-        // 2) Сразу показываем модалку со скелетонами,
-        //    потом до-загружаем картинки/атрибуты лайвом
         const baseItems: MintedItem[] = tokenIds.map(id => ({
           tokenId: id,
           name: `FROC #${id}`,
@@ -129,11 +128,9 @@ export default function MintForm() {
           attributes: undefined,
           openseaUrl: `https://opensea.io/assets/base/${FROC_ADDRESS}/${id}`,
         }))
-
         setMintedItems(baseItems)
         setShowResult(true)
 
-        // 3) Для каждого токена — дочитываем tokenURI + метадату с мягким поллингом
         for (const id of tokenIds) {
           let tokenUri: string | undefined
           try {
@@ -144,8 +141,8 @@ export default function MintForm() {
               args: [id],
             }) as unknown as string
           } catch {}
-
           if (!tokenUri) continue
+
           const meta = await pollMetadata(tokenUri)
           if (!meta) continue
 
@@ -241,12 +238,12 @@ export default function MintForm() {
       <div className="text-xs text-center">
         {writeError && (
           <div className="text-red-400">
-            {String((writeError as any)?.shortMessage || writeError.message)}
+            {String((writeError as any)?.shortMessage || (writeError as any)?.message || writeError)}
           </div>
         )}
         {waitError && (
           <div className="text-red-400">
-            {String((waitError as any)?.shortMessage || waitError.message)}
+            {String((waitError as any)?.shortMessage || (waitError as any)?.message || waitError)}
           </div>
         )}
         {hash && !waiting && !waitError && (
