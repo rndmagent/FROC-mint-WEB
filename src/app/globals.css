@@ -48,3 +48,35 @@ body {
   height: auto;
   animation: bg-float-up 200s linear infinite;
 }
+
+/* ========== iOS safe-area helpers ========== */
+@supports (padding: max(0px)) {
+  :root{
+    --safe-top: env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* === floating blurred collage bg (аккуратный cover) === */
+@keyframes bg-float-up {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-240px); } /* скорость/высота “дрейфа” — можно менять */
+}
+
+.bg-collage{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .25;                 /* прозрачность фона — крути от .15 до .35 */
+  filter: blur(2px);            /* мягкий блюр — крути 0–4px */
+  will-change: transform;
+}
+
+.bg-collage img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;            /* главное: заполняем весь вьюпорт без “ползанья” */
+  object-position: center;
+  animation: bg-float-up 200s linear infinite;  /* можно 120s для более активного движения */
+}
