@@ -1,6 +1,6 @@
 // src/app/page.tsx
 'use client'
-import WCDebug from './components/WCDebug'
+
 // Мелодия на фоне (из /public)
 import BackgroundAudio from './components/BackgroundAudio'
 // Наш диагностический блок (WSS / WC relay статусы)
@@ -85,7 +85,7 @@ export default function Page() {
             
             <DebugStatus />
 
-            <WCDebug />            
+                       
           </div>
 
           {/* Низ карточки: ссылки Contract / BaseScan / OpenSea */}
