@@ -1,13 +1,13 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 type Props = {
-  images: string[]                 // абсолютные или относительные пути
-  auto?: boolean                   // автопрокрутка
-  intervalMs?: number              // пауза между слайдами
-  height?: number                  // высота в px на десктопе
+  images: string[]
+  auto?: boolean
+  intervalMs?: number
+  height?: number
 }
 
 export default function NFTCarousel({
@@ -16,115 +16,148 @@ export default function NFTCarousel({
   intervalMs = 3500,
   height = 260,
 }: Props) {
-  const trackRef = useRef<HTMLUListElement>(null)
-  const [active, setActive] = useState(0)
-
-  // нормализуем список (убираем пустые/дубли случайные)
-  const slides = useMemo(
+  // нормализуем вход
+  const baseSlides = useMemo(
     () => Array.from(new Set(images.filter(Boolean))),
     [images],
   )
+  const realCount = baseSlides.length
+  if (realCount === 0) return null
 
-  // кнопки
-  const scrollToIndex = (idx: number) => {
-    const el = trackRef.current?.children[idx] as HTMLElement | undefined
-    el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
-  }
-  const next = () => scrollToIndex((active + 1) % slides.length)
-  const prev = () => scrollToIndex((active - 1 + slides.length) % slides.length)
+  // создаём клоны по краям: [last, ...real, first]
+  const loopSlides = useMemo(() => {
+    if (realCount === 1) return [...baseSlides] // для одного слайда клоны не нужны
+    return [baseSlides[realCount - 1], ...baseSlides, baseSlides[0]]
+  }, [baseSlides, realCount])
 
-  // следим за активным слайдом (snap + observer)
-  useEffect(() => {
+  // состояние
+  const [index, setIndex] = useState(realCount === 1 ? 0 : 1) // стартуем на 1 (первый реальный)
+  const [anim, setAnim] = useState(true) // включена ли анимация
+  const trackRef = useRef<HTMLDivElement>(null)
+  const slideRef = useRef<HTMLDivElement>(null)
+  const slideGap = 12 // px
+
+  // считаем ширину слайда (один раз и при ресайзе)
+  const getSlideW = () => (slideRef.current?.offsetWidth || 520) + slideGap
+
+  // применяем translateX
+  const applyPosition = (i: number, withAnim = true) => {
     const track = trackRef.current
     if (!track) return
-    const items = Array.from(track.children) as HTMLElement[]
-    const io = new IntersectionObserver(
-      (entries) => {
-        const centered = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
-        if (centered) setActive(items.indexOf(centered.target as HTMLElement))
-      },
-      { root: track, threshold: [0.5, 0.75, 0.95] },
-    )
-    items.forEach((it) => io.observe(it))
-    return () => io.disconnect()
-  }, [slides.length])
+    const dist = getSlideW() * i
+    setAnim(withAnim)
+    track.style.transform = `translate3d(${-dist}px,0,0)`
+  }
 
-  // автопрокрутка (пауза при наведении/скролле)
+  // начальная позиция
   useEffect(() => {
-    if (!auto || slides.length <= 1) return
-    const id = setInterval(next, intervalMs)
+    // примонтировались — выставили translate
+    applyPosition(index, false)
+    // на ресайз/ориентацию — перепозиционируем без анимации
+    const onResize = () => applyPosition(index, false)
+    window.addEventListener('resize', onResize)
+    window.addEventListener('orientationchange', onResize)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('orientationchange', onResize)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const goTo = (i: number) => {
+    setIndex(i)
+    applyPosition(i, true)
+  }
+  const next = () => goTo(index + 1)
+  const prev = () => goTo(index - 1)
+
+  // бесшовный цикл: когда доехали до клона — мгновенно прыгаем на реальный
+  const onTransitionEnd = () => {
+    if (realCount === 1) return
+    const lastIdx = loopSlides.length - 1
+    if (index === 0) {
+      // были на левом клоне -> прыжок на последний реальный
+      const target = realCount
+      setIndex(target)
+      applyPosition(target, false)
+    } else if (index === lastIdx) {
+      // были на правом клоне -> прыжок на первый реальный
+      const target = 1
+      setIndex(target)
+      applyPosition(target, false)
+    }
+  }
+
+  // автопрокрутка
+  useEffect(() => {
+    if (!auto || realCount <= 1) return
+    const id = setInterval(() => {
+      // чтобы анимация оставалась ровной — крутим шаг за шагом
+      next()
+    }, intervalMs)
     return () => clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auto, intervalMs, slides.length, active])
+  }, [auto, intervalMs, index, realCount])
 
-  if (!slides.length) return null
+  // активная точка (сдвинуто из-за клонов)
+  const activeDot =
+    realCount === 1 ? 0 : (index - 1 + realCount) % realCount
+
+  // размеры карточек
+  const slideH = Math.max(160, Math.min(420, height))
+  const slideW = Math.min(520, Math.round(slideH * 1.3)) // примерно 13:10
 
   return (
     <div
-      className="group relative w-full"
+      className="relative w-full overflow-hidden"
       style={{
-        // мягкая рамка и блюр под твой стиль
         borderRadius: 16,
         border: '1px solid rgba(255,255,255,.12)',
         background: 'rgba(255,255,255,.04)',
         backdropFilter: 'blur(6px)',
+        padding: 8,
       }}
     >
-      {/* трек */}
-      <ul
+      {/* лента */}
+      <div
         ref={trackRef}
-        className="
-          flex overflow-x-auto scroll-smooth snap-x snap-mandatory
-          gap-3 p-3
-        "
+        onTransitionEnd={onTransitionEnd}
         style={{
-          WebkitOverflowScrolling: 'touch',
-          scrollbarWidth: 'none' as any,
-          msOverflowStyle: 'none',
-          height,
-        }}
-        onWheel={(e) => {
-          // горизонтальный скролл колесиком на десктопе
-          if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-            trackRef.current?.scrollBy({ left: e.deltaY, behavior: 'smooth' })
-          }
+          display: 'flex',
+          gap: `${slideGap}px`,
+          willChange: 'transform',
+          transition: anim ? 'transform 420ms cubic-bezier(.22,.61,.36,1)' : 'none',
         }}
       >
-        {slides.map((src, i) => (
-          <li
-            key={i}
-            className="
-              snap-center shrink-0 relative overflow-hidden
-              rounded-xl border border-white/10
-              bg-white/5
-            "
-            style={{ width: Math.min(440, 0.8 * height * (3/2)), height: height - 10 }}
-            aria-current={i === active ? 'true' : 'false'}
+        {loopSlides.map((src, i) => (
+          <div
+            key={`${src}-${i}`}
+            ref={i === 1 ? slideRef : undefined} // эталонный для измерения width
+            className="relative shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/5"
+            style={{ width: slideW, height: slideH }}
           >
             <Image
               src={src}
               alt={`FROC preview #${i + 1}`}
               fill
-              sizes="(max-width: 640px) 85vw, 520px"
+              sizes={`${slideW}px`}
               className="object-cover"
-              priority={i < 2}
+              priority={i < 3}
             />
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
 
       {/* стрелки */}
-      {slides.length > 1 && (
+      {realCount > 1 && (
         <>
           <button
             aria-label="Previous"
             onClick={prev}
             className="
               absolute left-2 top-1/2 -translate-y-1/2
-              hidden sm:flex items-center justify-center
-              h-9 w-9 rounded-full bg-black/50 hover:bg-black/70
+              hidden sm:flex h-9 w-9 items-center justify-center
+              rounded-full bg-black/50 hover:bg-black/70
               border border-white/20 text-white
             "
           >
@@ -135,8 +168,8 @@ export default function NFTCarousel({
             onClick={next}
             className="
               absolute right-2 top-1/2 -translate-y-1/2
-              hidden sm:flex items-center justify-center
-              h-9 w-9 rounded-full bg-black/50 hover:bg-black/70
+              hidden sm:flex h-9 w-9 items-center justify-center
+              rounded-full bg-black/50 hover:bg-black/70
               border border-white/20 text-white
             "
           >
@@ -146,15 +179,14 @@ export default function NFTCarousel({
       )}
 
       {/* точки */}
-      {slides.length > 1 && (
+      {realCount > 1 && (
         <div className="pointer-events-none absolute bottom-2 left-0 right-0 flex justify-center gap-2">
-          {slides.map((_, i) => (
+          {baseSlides.map((_, i) => (
             <span
               key={i}
-              className={`
-                h-1.5 rounded-full transition-all
-                ${i === active ? 'w-6 bg-white/90' : 'w-2 bg-white/40'}
-              `}
+              className={`h-1.5 rounded-full transition-all ${
+                i === activeDot ? 'w-6 bg-white/90' : 'w-2 bg-white/40'
+              }`}
             />
           ))}
         </div>
