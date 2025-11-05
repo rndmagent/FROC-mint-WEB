@@ -15,7 +15,10 @@ import MintInfo from './components/MintInfo'
 import MintForm from './components/MintForm'
 import MintStatsInline from './components/MintStatsInline'
 import SocialIcons from './components/SocialIcons'
-import Disclaimer from './components/Disclaimer';
+import Disclaimer from './components/Disclaimer'
+
+// Карусель превью NFT
+import NFTCarousel from './components/NFTCarousel'
 
 export default function Page() {
   return (
@@ -29,20 +32,18 @@ export default function Page() {
       {/* Фоновая музыка (плеер скрыт) */}
       <BackgroundAudio />
 
-      {/* Слабые «световые орбы» над коллажем, но под контентом (pointer-events:none, чтобы не мешали кликам) */}
+      {/* Слабые «световые орбы» над коллажем, но под контентом */}
       <div className="pointer-events-none absolute inset-0 opacity-60 blur-3xl">
         <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,_#2563eb_0%,_transparent_60%)]" />
         <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,_#9333ea_0%,_transparent_60%)]" />
       </div>
 
-      {/* Основной слой с контентом (поверх фона/орбов) */}
+      {/* Основной слой с контентом */}
       <div className="relative z-10">
-        {/* Хиро-блок (баннер/текст) */}
-        
+        {/* Хиро-блок */}
         <Hero />
-        
 
-        {/* Карточка минта с рамкой/блюром */}
+        {/* Карточка минта */}
         <section className="mx-auto max-w-6xl px-6 pb-12">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_8px_30px_rgb(0,0,0,0.35)] backdrop-blur">
             {/* Верхняя строка статуса + иконки соцсетей */}
@@ -58,33 +59,51 @@ export default function Page() {
               </div>
             </div>
 
-            {/* Кнопка RainbowKit. При клике открывает модалку выбора кошелька */}
+            {/* Кнопка RainbowKit */}
             <div className="flex items-center justify-center mb-4">
               <ConnectButton accountStatus="address" chainStatus="name" showBalance={false} />
             </div>
 
-            {/* Маленький подсказочный текст под кнопкой (вариант для iOS и для остальных) */}
-            {typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) ? (
-              <p className="mt-2 text-xs text-white/60">
-                <b>Having trouble connecting on mobile?</b> Try <span className="underline">WalletConnect</span> or a desktop browser.
-              </p>
-            ) : (
-              <p className="mt-2 text-xs text-white/60">
-                <b>Having trouble connecting on mobile?</b> Try <span className="underline">WalletConnect</span> or a desktop browser.
-              </p>
-            )}
+            {/* Подсказка под кнопкой */}
+            <p className="mt-2 text-xs text-white/60">
+              <b>Having trouble connecting on mobile?</b> Try <span className="underline">WalletConnect</span> or a desktop browser.
+            </p>
 
             {/* Информация, форма минта и инлайн-статистика */}
             <MintInfo />
             <MintForm />
             <MintStatsInline />
 
-            {/* Дисклеймер и диагностический блок (WSS/WC) */}
-            <Disclaimer />
-            
-            <DebugStatus />
+            {/* --- Showcase: превью NFT под цифрами --- */}
+            <div className="mt-6">
+              <h3 className="mb-2 text-sm font-semibold text-white/80">Preview the FROCs</h3>
+              <NFTCarousel
+                images={[
+                  // Положи превью в /public/previews/... или вставь прямые HTTPS/IPFS ссылки
+                  '/previews/001.png',
+                  '/previews/002.png',
+                  '/previews/003.png',
+                  '/previews/004.png',
+                  '/previews/005.png',
+                  '/previews/006.png',
+                  '/previews/007.png',
+                  '/previews/008.png',
+                  '/previews/009.png',
+                  '/previews/010.png',
+                  '/previews/011.png',
+                  '/previews/012.png',
+                ]}
+                auto={true}
+                intervalMs={3200}
+                height={260} // 220–320 подбирай по вкусу
+              />
+              
+            </div>
+            {/* --- /Showcase --- */}
 
-                       
+            {/* Дисклеймер и диагностический блок */}
+            <Disclaimer />
+            <DebugStatus />
           </div>
 
           {/* Низ карточки: ссылки Contract / BaseScan / OpenSea */}
