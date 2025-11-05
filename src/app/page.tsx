@@ -66,8 +66,7 @@ export default function Page() {
             {/* Маленький подсказочный текст под кнопкой (вариант для iOS и для остальных) */}
             {typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) ? (
               <p className="mt-2 text-xs text-white/60">
-                <b>Having trouble connecting on mobile?</b><br />
-                On some iOS devices, tapping a wallet may not open the app. Try a desktop browser. A fix is on the way.
+                <b>Having trouble connecting on mobile?</b> Try <span className="underline">WalletConnect</span> or a desktop browser.
               </p>
             ) : (
               <p className="mt-2 text-xs text-white/60">
