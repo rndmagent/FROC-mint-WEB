@@ -1,6 +1,7 @@
+// src/app/components/NFTCarousel.tsx
 'use client'
 
-import Image from 'next/image'
+import NextImage from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 type Props = {
@@ -8,6 +9,7 @@ type Props = {
   auto?: boolean
   intervalMs?: number
   height?: number
+  eagerCount?: number // сколько слайдов грузить агрессивно
 }
 
 export default function NFTCarousel({
@@ -15,8 +17,9 @@ export default function NFTCarousel({
   auto = true,
   intervalMs = 3500,
   height = 260,
+  eagerCount = 3,
 }: Props) {
-  // нормализация входа
+  // нормализация входных ссылок
   const baseSlides = useMemo(
     () => Array.from(new Set(images.filter(Boolean))),
     [images],
@@ -24,7 +27,7 @@ export default function NFTCarousel({
   const realCount = baseSlides.length
   if (realCount === 0) return null
 
-  // клоны по краям: [last, ...real, first] — для бесшовного цикла
+  // клоны по краям для бесшовного цикла: [last, ...real, first]
   const loopSlides = useMemo(() => {
     if (realCount === 1) return [...baseSlides]
     return [baseSlides[realCount - 1], ...baseSlides, baseSlides[0]]
@@ -35,27 +38,32 @@ export default function NFTCarousel({
   const probeRef = useRef<HTMLDivElement>(null)
   const lastValidW = useRef<number>(0)
 
-  const [index, setIndex] = useState(realCount === 1 ? 0 : 1) // старт на первом реальном
+  const [index, setIndex] = useState(realCount === 1 ? 0 : 1) // первый реальный
   const [anim, setAnim] = useState(true)
   const [isAnimating, setIsAnimating] = useState(false)
   const [isReady, setIsReady] = useState(false)
 
-  // drag state
+  // загрузка изображений (для скелетов)
+  const [loaded, setLoaded] = useState<boolean[]>(
+    () => new Array(loopSlides.length).fill(false),
+  )
+
+  // drag via Pointer Events
   const drag = useRef({
     active: false,
     lock: '' as '' | 'x' | 'y',
     startX: 0,
     startY: 0,
-    dx: 0, // смещение в px (может быть отрицательным)
+    startT: 0,
+    dx: 0,
   })
 
   const slideGap = 12
   const slideH = Math.max(160, Math.min(420, height))
   const slideW = Math.min(520, Math.round(slideH * 1.3))
 
-  // утилиты
+  // измерение ширины карточки (с учётом gap)
   const measure = () => {
-    // ширина карточки: эталон + gap
     const w = (probeRef.current?.offsetWidth || 0) + slideGap
     if (w > 0) {
       lastValidW.current = w
@@ -76,7 +84,7 @@ export default function NFTCarousel({
     setTranslate(w * i, withAnim)
   }
 
-  // первичная инициализация
+  // первичная инициализация/ресайз
   useEffect(() => {
     const init = () => {
       const w = measure()
@@ -100,6 +108,16 @@ export default function NFTCarousel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // прогрев картинок (ускоряет первые переходы)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const urls = Array.from(new Set(baseSlides))
+    urls.forEach((src) => {
+      const img = new window.Image()
+      img.src = src
+    })
+  }, [baseSlides])
 
   const goTo = (i: number) => {
     if (isAnimating || !isReady) return
@@ -125,7 +143,7 @@ export default function NFTCarousel({
     }
   }
 
-  // автоплей с паузой при невидимости вкладки
+  // автоплей + пауза при невидимости вкладки
   useEffect(() => {
     if (!auto || realCount <= 1) return
     if (document.hidden) return
@@ -144,65 +162,99 @@ export default function NFTCarousel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auto, intervalMs, index, isReady, isAnimating, realCount])
 
-  // свайп пальцем (тач)
-  const onTouchStart = (e: React.TouchEvent) => {
+  // ----- Pointer Events: свайп -----
+  const onPointerDown = (e: React.PointerEvent) => {
     if (!isReady) return
-    const t = e.touches[0]
-    drag.current = { active: true, lock: '', startX: t.clientX, startY: t.clientY, dx: 0 }
-    setAnim(false) // во время драга — без анимации
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+
+    drag.current.active = true
+    drag.current.lock = ''
+    drag.current.startX = e.clientX
+    drag.current.startY = e.clientY
+    drag.current.startT = performance.now()
+    drag.current.dx = 0
+
+    setAnim(false)
   }
 
-  const onTouchMove = (e: React.TouchEvent) => {
+  const onPointerMove = (e: React.PointerEvent) => {
     if (!drag.current.active) return
-    const t = e.touches[0]
-    const dx = t.clientX - drag.current.startX
-    const dy = t.clientY - drag.current.startY
+    const dx = e.clientX - drag.current.startX
+    const dy = e.clientY - drag.current.startY
 
-    // блокируем ось только когда становится понятно направление
     if (!drag.current.lock) {
       if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
         drag.current.lock = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
       }
     }
-    if (drag.current.lock === 'y') return // даём прокручиваться странице
+    if (drag.current.lock === 'y') return
 
-    // двигаем ленту на текущий dx
-    drag.current.dx = dx
     const w = measure()
-    const basePx = w * index
-    setTranslate(basePx - dx, false)
+    const maxPull = Math.min(0.9 * w, 280)
+    const clampedDx = Math.max(-maxPull, Math.min(maxPull, dx))
+    drag.current.dx = clampedDx
 
-    // отменяем скролл страницы, когда перетягиваем по X
+    const basePx = w * index
+    setTranslate(basePx - clampedDx, false)
     e.preventDefault()
   }
 
-  const onTouchEnd = () => {
+  const finishDrag = (dir: 'stay' | 'prev' | 'next') => {
+    setAnim(true)
+    if (dir === 'next') next()
+    else if (dir === 'prev') prev()
+    else applyPosition(index, true)
+  }
+
+  const onPointerUp = () => {
     if (!drag.current.active) return
+    const now = performance.now()
+    const dt = Math.max(16, now - drag.current.startT)
     const { dx, lock } = drag.current
     drag.current.active = false
-    const w = measure()
-    const threshold = Math.min(0.25 * w, 80) // порог: 25% ширины или 80px
-
-    // возвращаем анимацию
-    setAnim(true)
 
     if (lock !== 'x') {
-      // ось не была захвачена — просто вернуть на место
-      applyPosition(index, true)
+      finishDrag('stay')
       return
     }
 
-    if (Math.abs(dx) > threshold) {
-      if (dx < 0) next()
-      else prev()
-    } else {
-      // недотянули — вернуться
-      applyPosition(index, true)
-    }
+    const w = measure()
+    const threshold = Math.min(0.25 * w, 80)
+    const velocity = dx / dt // px/ms
+
+    const goNext = dx < 0 && (Math.abs(dx) > threshold || velocity < -0.5)
+    const goPrev = dx > 0 && (Math.abs(dx) > threshold || velocity > 0.5)
+
+    if (goNext) finishDrag('next')
+    else if (goPrev) finishDrag('prev')
+    else finishDrag('stay')
   }
 
+  const onPointerCancel = () => {
+    drag.current.active = false
+    drag.current.lock = ''
+    drag.current.dx = 0
+    setAnim(true)
+    applyPosition(index, true)
+  }
+
+  // активная точка
   const activeDot =
     realCount === 1 ? 0 : (index - 1 + realCount) % realCount
+
+  // скелет-плейсхолдер
+  const Skeleton = () => (
+    <div
+      className="absolute inset-0 rounded-xl"
+      style={{
+        animation: 'frocShimmer 1.2s linear infinite',
+        background:
+          'linear-gradient(120deg, rgba(255,255,255,.10), rgba(255,255,255,.05) 40%, rgba(255,255,255,.10))',
+        backgroundSize: '200% 100%',
+        filter: 'grayscale(20%)',
+      }}
+    />
+  )
 
   return (
     <div
@@ -213,8 +265,8 @@ export default function NFTCarousel({
         background: 'rgba(255,255,255,.04)',
         backdropFilter: 'blur(6px)',
         padding: 8,
-        // чтобы страница могла скроллиться по Y, а жест по X ловился компонентом:
-        touchAction: drag.current.active ? 'none' : 'pan-y',
+        overscrollBehaviorX: 'contain',
+        touchAction: 'pan-y',
         WebkitUserSelect: 'none',
         userSelect: 'none',
       }}
@@ -223,9 +275,10 @@ export default function NFTCarousel({
       <div
         ref={trackRef}
         onTransitionEnd={onTransitionEnd}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
         style={{
           display: 'flex',
           gap: `${slideGap}px`,
@@ -233,26 +286,44 @@ export default function NFTCarousel({
           transition: anim
             ? 'transform 520ms cubic-bezier(.22,.61,.36,1)'
             : 'none',
-          opacity: isReady ? 1 : 0,
+          opacity: isReady ? 1 : 0.999,
         }}
       >
-        {loopSlides.map((src, i) => (
-          <div
-            key={`${src}-${i}`}
-            ref={i === 1 ? probeRef : undefined}
-            className="relative shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/5"
-            style={{ width: slideW, height: slideH }}
-          >
-            <Image
-              src={src}
-              alt={`FROC preview #${i + 1}`}
-              fill
-              sizes={`${slideW}px`}
-              className="object-cover"
-              priority={i < 3}
-            />
-          </div>
-        ))}
+        {loopSlides.map((src, i) => {
+          const isProbe = i === 1
+          const eager = i <= eagerCount
+          const showSkeleton = !loaded[i]
+
+          return (
+            <div
+              key={`${src}-${i}`}
+              ref={isProbe ? probeRef : undefined}
+              className="relative shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/5"
+              style={{ width: slideW, height: slideH }}
+            >
+              {showSkeleton && <Skeleton />}
+
+              <NextImage
+                src={src}
+                alt={`FROC preview #${i + 1}`}
+                fill
+                sizes={`${slideW}px`}
+                className="object-cover"
+                priority={eager}
+                loading={eager ? 'eager' : 'lazy'}
+                fetchPriority={eager ? 'high' : 'auto'}
+                onLoadingComplete={() => {
+                  setLoaded((arr) => {
+                    if (arr[i]) return arr
+                    const next = arr.slice()
+                    next[i] = true
+                    return next
+                  })
+                }}
+              />
+            </div>
+          )
+        })}
       </div>
 
       {/* стрелки (десктоп) */}
@@ -300,4 +371,11 @@ export default function NFTCarousel({
       )}
     </div>
   )
+}
+
+/* маленький keyframes для shimmer-скелета (можно перенести в globals.css) */
+declare global {
+  interface CSSStyleDeclaration {
+    // TS подсказки не нужны — просто чтобы не ругался на кастомные анимации
+  }
 }
