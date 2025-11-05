@@ -1,8 +1,3 @@
-// next.config.ts
-import type { NextConfig } from 'next'
-
-const isProd = process.env.NODE_ENV === 'production'
-
 // --- Content Security Policy ---
 const csp = [
   // базовые
@@ -29,14 +24,11 @@ const csp = [
   // СЕТЬ: RPC + WalletConnect (HTTP + WSS)
   [
     "connect-src 'self'",
-    // Base RPC
     'https://mainnet.base.org',
     'https://base.llamarpc.com',
     'https://base.publicnode.com',
     'https://lb.drpc.org',
-    // Lighthouse (metadata/images)
     'https://gateway.lighthouse.storage',
-    // WalletConnect официальные домены
     'https://relay.walletconnect.com',
     'wss://relay.walletconnect.com',
     'https://rpc.walletconnect.com',
@@ -44,11 +36,9 @@ const csp = [
     'https://registry.walletconnect.com',
     'https://images.walletconnect.com',
     'https://cdn.walletconnect.com',
-    // wildcard на *.walletconnect.com
     'https://*.walletconnect.com',
     'wss://*.walletconnect.com',
-    // deeplink-домены некоторых кошельков
-    'https://*.app.link',
+    'https://*.app.link', // уже было, оставляем
   ].join(' '),
 
   // шрифты
@@ -60,28 +50,25 @@ const csp = [
   // воркеры (нужны некоторым сборкам Next)
   "worker-src 'self' blob:",
 
+  // ВАЖНО: разрешаем навигацию на универсальные ссылки и схемы кошельков (iOS)  // NEW
+  [
+    "navigate-to 'self' https: ",
+    // universal links (Branch) — кошельки открываются через них
+    'https://*.app.link',
+    'https://metamask.app.link',
+    // популярные схемы кошельков (iOS увидит переход)
+    'metamask:',
+    'rainbow:',
+    'phantom:',
+    'keplr:',
+    'trust:',
+    'okx:',
+    'rabby:',
+    'coinbase:',
+    'zerion:',
+    'safe:',
+  ].join(' '), // NEW
+
   // запрет встраивания нашего сайта
   "frame-ancestors 'none'",
 ].join('; ')
-
-const nextConfig: NextConfig = {
-  productionBrowserSourceMaps: false,
-  async headers() {
-    if (!isProd) return []
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive, nosnippet' },
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'Referrer-Policy', value: 'no-referrer' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
-          { key: 'Content-Security-Policy', value: csp },
-        ],
-      },
-    ]
-  },
-}
-
-export default nextConfig

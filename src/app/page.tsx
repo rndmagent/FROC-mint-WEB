@@ -1,6 +1,6 @@
 // src/app/page.tsx
 'use client'
-
+import WCDebug from './components/WCDebug'
 // Мелодия на фоне (из /public)
 import BackgroundAudio from './components/BackgroundAudio'
 // Наш диагностический блок (WSS / WC relay статусы)
@@ -38,7 +38,9 @@ export default function Page() {
       {/* Основной слой с контентом (поверх фона/орбов) */}
       <div className="relative z-10">
         {/* Хиро-блок (баннер/текст) */}
+        
         <Hero />
+        
 
         {/* Карточка минта с рамкой/блюром */}
         <section className="mx-auto max-w-6xl px-6 pb-12">
@@ -80,7 +82,10 @@ export default function Page() {
 
             {/* Дисклеймер и диагностический блок (WSS/WC) */}
             <Disclaimer />
+            
             <DebugStatus />
+
+            <WCDebug />            
           </div>
 
           {/* Низ карточки: ссылки Contract / BaseScan / OpenSea */}
