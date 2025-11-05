@@ -16,7 +16,7 @@ export default function NFTCarousel({
   intervalMs = 3500,
   height = 260,
 }: Props) {
-  // 1) нормализуем вход
+  // нормализация входа
   const baseSlides = useMemo(
     () => Array.from(new Set(images.filter(Boolean))),
     [images],
@@ -24,55 +24,67 @@ export default function NFTCarousel({
   const realCount = baseSlides.length
   if (realCount === 0) return null
 
-  // 2) клоны для бесконечного цикла
+  // создаём клоны по краям
   const loopSlides = useMemo(() => {
     if (realCount === 1) return [...baseSlides]
     return [baseSlides[realCount - 1], ...baseSlides, baseSlides[0]]
   }, [baseSlides, realCount])
 
-  // 3) состояние
-  const [index, setIndex] = useState(realCount === 1 ? 0 : 1) // старт на 1 (первый реальный)
-  const [anim, setAnim] = useState(false) // после первой расстановки включим
+  // refs & state
   const trackRef = useRef<HTMLDivElement>(null)
-  const slideRef = useRef<HTMLDivElement>(null)
-  const slideGap = 12 // px
+  const probeRef = useRef<HTMLDivElement>(null)
+  const lastValidW = useRef<number>(0)
 
-  // drag state
-  const drag = useRef({
-    active: false,
-    startX: 0,
-    lastX: 0,
-    moved: 0,
-    wasClick: true,
-  })
+  const [index, setIndex] = useState(realCount === 1 ? 0 : 1) // старт с первого реального
+  const [anim, setAnim] = useState(true)
+  const [isAnimating, setIsAnimating] = useState(false)
+  const [isReady, setIsReady] = useState(false)
 
-  // 4) геометрия
+  const slideGap = 12
   const slideH = Math.max(160, Math.min(420, height))
-  const slideW = Math.min(520, Math.round(slideH * 1.3)) // ~13:10
+  const slideW = Math.min(520, Math.round(slideH * 1.3))
 
-  const getStep = () => slideW + slideGap
+  // утилиты
+  const measure = () => {
+    // ширина реальной карточки (probeRef)
+    const w = (probeRef.current?.offsetWidth || 0) + slideGap
+    if (w > 0) {
+      lastValidW.current = w
+      return w
+    }
+    // если по какой-то причине 0 — используем последний валидный/фолбек
+    return lastValidW.current || slideW + slideGap
+  }
 
-  // 5) применяем translateX
-  const setTranslate = (px: number, withAnim: boolean) => {
-    const el = trackRef.current
-    if (!el) return
+  const applyPosition = (i: number, withAnim: boolean) => {
+    const track = trackRef.current
+    if (!track) return
+    const w = measure()
     setAnim(withAnim)
-    el.style.transform = `translate3d(${px}px,0,0)`
+    track.style.transform = `translate3d(${-w * i}px,0,0)`
   }
 
-  const applyByIndex = (i: number, withAnim: boolean) => {
-    const px = -getStep() * i
-    setTranslate(px, withAnim)
-  }
-
-  // начальная позиция
+  // первичная инициализация (после того, как появятся размеры)
   useEffect(() => {
-    applyByIndex(index, false)
-    requestAnimationFrame(() => setAnim(true))
-    const onResize = () => applyByIndex(index, false)
+    const init = () => {
+      const w = measure()
+      if (w > 0) {
+        applyPosition(index, false)
+        setIsReady(true)
+      }
+    }
+    // сразу и на следующий кадр — чтобы поймать layout
+    init()
+    const raf = requestAnimationFrame(init)
+    // ресайзы/ориентация
+    const onResize = () => {
+      const w = measure()
+      if (w > 0) applyPosition(index, false)
+    }
     window.addEventListener('resize', onResize)
     window.addEventListener('orientationchange', onResize)
     return () => {
+      cancelAnimationFrame(raf)
       window.removeEventListener('resize', onResize)
       window.removeEventListener('orientationchange', onResize)
     }
@@ -80,114 +92,82 @@ export default function NFTCarousel({
   }, [])
 
   const goTo = (i: number) => {
+    if (isAnimating || !isReady) return // защищаемся от дабл-кликов
+    setIsAnimating(true)
     setIndex(i)
-    applyByIndex(i, true)
+    applyPosition(i, true)
   }
   const next = () => goTo(index + 1)
   const prev = () => goTo(index - 1)
 
-  // бесшовный цикл
   const onTransitionEnd = () => {
+    setIsAnimating(false)
     if (realCount === 1) return
-    const last = loopSlides.length - 1
+    const lastIdx = loopSlides.length - 1
     if (index === 0) {
-      const t = realCount
-      setIndex(t)
-      applyByIndex(t, false)
-    } else if (index === last) {
-      const t = 1
-      setIndex(t)
-      applyByIndex(t, false)
+      const target = realCount
+      setIndex(target)
+      applyPosition(target, false)
+    } else if (index === lastIdx) {
+      const target = 1
+      setIndex(target)
+      applyPosition(target, false)
     }
   }
 
-  // автоплей
+  // автоплей c паузой при невидимости вкладки
   useEffect(() => {
     if (!auto || realCount <= 1) return
-    const id = setInterval(() => next(), intervalMs)
-    return () => clearInterval(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auto, intervalMs, index, realCount])
-
-  // 6) свайп руками (pointer events)
-  const onPointerDown: React.PointerEventHandler = (e) => {
-    if (!trackRef.current) return
-    drag.current.active = true
-    drag.current.wasClick = true
-    drag.current.startX = e.clientX
-    drag.current.lastX = e.clientX
-    drag.current.moved = 0
-    setAnim(false)
-    ;(e.target as Element).setPointerCapture?.(e.pointerId)
-  }
-
-  const onPointerMove: React.PointerEventHandler = (e) => {
-    if (!drag.current.active || !trackRef.current) return
-    const dx = e.clientX - drag.current.lastX
-    drag.current.lastX = e.clientX
-    drag.current.moved += Math.abs(dx)
-    if (drag.current.moved > 3) drag.current.wasClick = false
-
-    const base = -getStep() * index
-    setTranslate(base + (e.clientX - drag.current.startX), false)
-  }
-
-  const onPointerUp: React.PointerEventHandler = (e) => {
-    if (!drag.current.active) return
-    drag.current.active = false
-    // решаем, листать ли
-    const totalDx = e.clientX - drag.current.startX
-    const threshold = getStep() * 0.2 // 20% ширины — порог
-    setAnim(true)
-    if (totalDx > threshold) {
-      prev()
-    } else if (totalDx < -threshold) {
+    if (document.hidden) return
+    const id = setInterval(() => {
+      // если внезапно измерение стало 0 — не дёргаем
+      if (!isReady || isAnimating) return
       next()
-    } else {
-      applyByIndex(index, true) // вернуться на место
+    }, intervalMs)
+    const onVis = () => {
+      // при возвращении — перепозиционируем без анимации
+      if (!document.hidden) applyPosition(index, false)
     }
-  }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', onVis)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auto, intervalMs, index, isReady, isAnimating, realCount])
 
-  // активная точка (с учётом клонов)
-  const activeDot = realCount === 1 ? 0 : (index - 1 + realCount) % realCount
+  const activeDot =
+    realCount === 1 ? 0 : (index - 1 + realCount) % realCount
 
   return (
     <div
-      className="relative w-full overflow-hidden select-none"
+      className="relative w-full overflow-hidden"
       style={{
         borderRadius: 16,
         border: '1px solid rgba(255,255,255,.12)',
         background: 'rgba(255,255,255,.04)',
         backdropFilter: 'blur(6px)',
         padding: 8,
-        // важно для жестов: вертикальная прокрутка страницы не блокируется
-        touchAction: 'pan-y',
       }}
-      // блокируем контекстное меню/drag на изображениях
-      onContextMenu={(e) => e.preventDefault()}
     >
       {/* лента */}
       <div
         ref={trackRef}
         onTransitionEnd={onTransitionEnd}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
         style={{
           display: 'flex',
           gap: `${slideGap}px`,
           willChange: 'transform',
           transition: anim
-            ? // мягкая, кинематографичная кривая (easeOutQuint-подобная)
-              'transform 520ms cubic-bezier(.22,.68,0,.99)'
+            ? 'transform 520ms cubic-bezier(.22,.61,.36,1)'
             : 'none',
+          opacity: isReady ? 1 : 0, // не показываем, пока не готовы
         }}
       >
         {loopSlides.map((src, i) => (
           <div
             key={`${src}-${i}`}
-            ref={i === 1 ? slideRef : undefined}
+            ref={i === 1 ? probeRef : undefined}
             className="relative shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/5"
             style={{ width: slideW, height: slideH }}
           >
@@ -195,16 +175,15 @@ export default function NFTCarousel({
               src={src}
               alt={`FROC preview #${i + 1}`}
               fill
-              className="object-cover pointer-events-none"
               sizes={`${slideW}px`}
+              className="object-cover"
               priority={i < 3}
-              draggable={false as any}
             />
           </div>
         ))}
       </div>
 
-      {/* стрелки (десктоп) */}
+      {/* стрелки */}
       {realCount > 1 && (
         <>
           <button

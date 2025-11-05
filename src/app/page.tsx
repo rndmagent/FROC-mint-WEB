@@ -19,15 +19,21 @@ import Disclaimer from './components/Disclaimer'
 
 // Карусель превью NFT
 import NFTCarousel from './components/NFTCarousel'
+import BackgroundCollage from './components/BackgroundCollage'
 
 export default function Page() {
   return (
     // Корневой контейнер страницы: фон, цвет текста, обрезка overflow для эффектов
     <main className="min-h-screen bg-[#0b0b0f] text-white relative overflow-hidden">
       {/* === ФИКСИРОВАННЫЙ ФОНОВЫЙ КОЛЛАЖ (под всем контентом) === */}
-      <div className="bg-collage">
-        <img src="/collage.png" alt="" />
-      </div>
+      <BackgroundCollage
+  src="/collage.png"
+  speedSec={300}     // сделай быстрее/медленнее по вкусу
+  blurPx={6}        // мягкость блюра
+  saturate={50}    // насыщенность
+  brightness={50}   // яркость
+  scale={1.06}      // чуть увеличиваем, чтобы у блюра не светились края
+/>
 
       {/* Фоновая музыка (плеер скрыт) */}
       <BackgroundAudio />

@@ -63,20 +63,46 @@ body {
   to   { transform: translateY(-240px); } /* скорость/высота “дрейфа” — можно менять */
 }
 
-.bg-collage{
+.froc-collage{
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: .25;                 /* прозрачность фона — крути от .15 до .35 */
-  filter: blur(2px);            /* мягкий блюр — крути 0–4px */
-  will-change: transform;
+  overflow: hidden;
+
+  /* крутилки */
+  --froc-collage-h: 0px;           /* сюда кладём реальную высоту картинки (JS) */
+  --froc-collage-speed: 90s;
+  --froc-collage-blur: 6px;
+  --froc-collage-sat: 100%;
+  --froc-collage-bright: 100%;
+  --froc-collage-scale: 1.04;
 }
 
-.bg-collage img{
+/* лента с двумя img друг под другом */
+.froc-collage__track{
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  will-change: transform;
+  animation: froc-collage-loop var(--froc-collage-speed) linear infinite;
+  transition: opacity .2s ease;
+}
+
+.froc-collage__img{
   width: 100%;
-  height: 100%;
-  object-fit: cover;            /* главное: заполняем весь вьюпорт без “ползанья” */
-  object-position: center;
-  animation: bg-float-up 200s linear infinite;  /* можно 120s для более активного движения */
+  height: auto;         /* сохраняем пропорции — без обрезки */
+  display: block;
+  filter: blur(var(--froc-collage-blur))
+          saturate(var(--froc-collage-sat))
+          brightness(var(--froc-collage-bright));
+  transform: scale(var(--froc-collage-scale));
+}
+
+/* едем вверх ровно на высоту одной картинки */
+@keyframes froc-collage-loop {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(calc(-1 * var(--froc-collage-h))); }
 }
