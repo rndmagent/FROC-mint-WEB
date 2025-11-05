@@ -29,9 +29,9 @@ export default function Page() {
       <BackgroundCollage
   src="/collage.png"
   speedSec={300}     // сделай быстрее/медленнее по вкусу
-  blurPx={6}        // мягкость блюра
-  saturate={50}    // насыщенность
-  brightness={50}   // яркость
+  blurPx={4}        // мягкость блюра
+  saturate={70}    // насыщенность
+  brightness={70}   // яркость
   scale={1.06}      // чуть увеличиваем, чтобы у блюра не светились края
 />
 
