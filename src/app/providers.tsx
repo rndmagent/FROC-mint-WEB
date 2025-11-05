@@ -17,7 +17,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           initialChain={base}
           modalSize="compact"
           appInfo={{
-            appName: 'FROC Mint',
+            appName: 'FROC NFT',
             learnMoreUrl: 'https://froc-nft.com',
           }}
         >

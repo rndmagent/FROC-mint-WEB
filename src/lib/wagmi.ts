@@ -21,7 +21,7 @@ const transport = fallback(
 
 // Конфиг RainbowKit/Wagmi — строго по доке
 export const config = getDefaultConfig({
-  appName: 'FROC Mint',
+  appName: 'FROC NFT',
   projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID!, // обязательно
   chains: [base],
   transports: { [base.id]: transport },
