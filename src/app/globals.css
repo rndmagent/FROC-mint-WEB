@@ -106,3 +106,28 @@ body {
   0%   { transform: translateY(0); }
   100% { transform: translateY(calc(-1 * var(--froc-collage-h))); }
 }
+
+/* ==== MintResultModal animations ==== */
+.froc-fade-in {
+  animation: frocFadeIn .35s ease both;
+}
+.froc-pop-up {
+  animation: frocPopUp .35s cubic-bezier(.15,.75,.2,1.1) both;
+}
+/* slide-in учитывает направление: --froc-dir: 1 | -1 */
+.froc-slide-in {
+  animation: frocSlideIn .28s ease both;
+}
+
+@keyframes frocFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes frocPopUp {
+  0%   { opacity: 0; transform: translateY(14px) scale(.96); }
+  100% { opacity: 1; transform: translateY(0)   scale(1); }
+}
+@keyframes frocSlideIn {
+  from { opacity: 0; transform: translateX(calc(var(--froc-dir, 1) * 12px)); }
+  to   { opacity: 1; transform: translateX(0); }
+}
