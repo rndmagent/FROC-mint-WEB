@@ -20,6 +20,8 @@ import Disclaimer from './components/Disclaimer'
 // Карусель превью NFT
 import NFTCarousel from './components/NFTCarousel'
 import BackgroundCollage from './components/BackgroundCollage'
+// Розыск NFT
+import WantedBlock from './components/WantedBlock'
 
 export default function Page() {
   return (
@@ -79,6 +81,8 @@ export default function Page() {
             <MintInfo />
             <MintForm />
             <MintStatsInline />
+
+            <WantedBlock mode="wanted" />
 
             {/* --- Showcase: превью NFT под цифрами --- */}
             <div className="mt-6">
