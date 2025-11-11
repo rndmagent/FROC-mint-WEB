@@ -82,7 +82,9 @@ export default function Page() {
             <MintForm />
             <MintStatsInline />
 
-            <WantedBlock mode="wanted" />
+
+            {/* <WantedBlock mode="caught" /> */}
+            <WantedBlock mode="caught" /> 
 
             {/* --- Showcase: превью NFT под цифрами --- */}
             <div className="mt-6">
