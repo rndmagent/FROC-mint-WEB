@@ -84,7 +84,7 @@ export default function Page() {
 
 
             {/* <WantedBlock mode="caught" /> */}
-            <WantedBlock mode="caught" /> 
+            <WantedBlock mode='wanted' /> 
 
             {/* --- Showcase: превью NFT под цифрами --- */}
             <div className="mt-6">
